@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Food Delivery - Creational Patterns Demo</title>
+    <style>
+      /* simple clean styles */
+      body {
+        font-family: Inter, system-ui, Segoe UI, Roboto, Arial;
+        margin: 0;
+        background: #f5f7fb;
+        color: #111;
+      }
+      header {
+        background: #0b5cff;
+        color: #fff;
+        padding: 14px 18px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+      .container {
+        max-width: 980px;
+        margin: 18px auto;
+        padding: 10px;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: 1fr 320px;
+        gap: 18px;
+      }
+      .card {
+        background: #fff;
+        border-radius: 10px;
+        padding: 12px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+      }
+      .menu-list {
+        display: grid;
+        gap: 10px;
+      }
+      .menu-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 8px;
+        border-radius: 8px;
+        background: #fbfcff;
+      }
+      button {
+        background: #0b5cff;
+        color: #fff;
+        border: 0;
+        padding: 8px 10px;
+        border-radius: 8px;
+        cursor: pointer;
+      }
+      .small {
+        font-size: 13px;
+        color: #555;
+      }
+      .cart-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 6px;
+        border-bottom: 1px solid #eee;
+      }
+      footer {
+        margin-top: 18px;
+        text-align: center;
+        color: #666;
+        font-size: 13px;
+      }
+      select,
+      input {
+        padding: 6px;
+        border-radius: 6px;
+        border: 1px solid #ddd;
+      }
+      .muted {
+        color: #666;
+        font-size: 13px;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div><strong>FoodDelivery — Creational Patterns Demo</strong></div>
+      <div class="small">
+        Student: Erramsetti Sai Vignesh • Roll: 2303A53013 • Batch 46
+      </div>
+    </header>
+
+    <div class="container">
+      <div class="grid">
+        <!-- Left: Menu & Checkout -->
+        <div>
+          <div class="card">
+            <h3>Restaurants / Menu</h3>
+            <div id="restaurantName" class="small muted">Loading menu...</div>
+            <div id="menuList" class="menu-list" style="margin-top: 10px"></div>
+          </div>
+
+          <div class="card" style="margin-top: 12px">
+            <h3>Checkout</h3>
+            <div
+              style="
+                display: flex;
+                gap: 8px;
+                align-items: center;
+                margin-bottom: 8px;
+              "
+            >
+              <label class="small">Payment Family</label>
+              <select id="familySelect">
+                <option value="online">Online Payments</option>
+                <option value="offline">Offline Payments</option>
+              </select>
+              <label class="small">Payment Type</label>
+              <select id="paymentType">
+                <option value="upi">UPI</option>
+                <option value="wallet">Wallet</option>
+                <option value="card">Card</option>
+                <option value="cod">COD</option>
+              </select>
+            </div>
+
+            <div
+              style="
+                display: flex;
+                gap: 8px;
+                align-items: center;
+                margin-bottom: 8px;
+              "
+            >
+              <input
+                id="address"
+                placeholder="Delivery address"
+                style="flex: 1"
+              />
+              <input
+                id="coupon"
+                placeholder="Coupon (optional)"
+                style="width: 140px"
+              />
+            </div>
+
+            <div style="display: flex; gap: 8px; align-items: center">
+              <button id="checkoutBtn">Place Order</button>
+              <div id="checkoutMsg" class="small muted"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right: Cart -->
+        <div>
+          <div class="card">
+            <h3>Cart <span id="cartCount" class="small muted"></span></h3>
+            <div id="cartList"></div>
+            <div
+              style="
+                margin-top: 10px;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+              "
+            >
+              <div>
+                <strong>Total: ₹<span id="total">0</span></strong>
+              </div>
+              <div><button id="clearCart">Clear</button></div>
+            </div>
+          </div>
+
+          <div class="card" style="margin-top: 12px">
+            <h3>Past Orders</h3>
+            <div id="ordersList" class="small muted">No orders yet</div>
+          </div>
+        </div>
+      </div>
+
+      <footer>
+        Implemented patterns: Singleton (CartManager), Factory (PaymentFactory),
+        Abstract Factory (PaymentFamily), Builder (OrderBuilder), Prototype
+        (MenuItem clone)
+      </footer>
+    </div>
+
+    <script>
+      /* ---------------------------
+   Simulated backend data
+   --------------------------- */
+      const SIMULATED_MENU = {
+        restaurant: "Tasty Bites",
+        items: [
+          {
+            id: 1,
+            name: "Margherita Pizza",
+            price: 320,
+            desc: "Classic cheese pizza",
+          },
+          { id: 2, name: "Veg Biryani", price: 220, desc: "Spicy veg biryani" },
+          {
+            id: 3,
+            name: "Paneer Wrap",
+            price: 140,
+            desc: "Grilled paneer with sauce",
+          },
+          { id: 4, name: "Chocolate Shake", price: 90, desc: "Cold & creamy" },
+        ],
+      };
+
+      /* ---------------------------
+   Prototype Pattern
+   - MenuItem prototype with clone()
+   --------------------------- */
+      class MenuItemProto {
+        constructor({ id, name, price, desc }) {
+          this.id = id;
+          this.name = name;
+          this.price = price;
+          this.desc = desc;
+          this.custom = {}; // store customizations (size, extras)
+        }
+        clone() {
+          const copy = new MenuItemProto({
+            id: this.id,
+            name: this.name,
+            price: this.price,
+            desc: this.desc,
+          });
+          copy.custom = JSON.parse(JSON.stringify(this.custom));
+          return copy;
+        }
+        withCustomization(custom) {
+          const c = this.clone();
+          c.custom = { ...c.custom, ...custom };
+          // adjust price slightly for example
+          if (custom.size === "Large") c.price += 50;
+          if (custom.extraCheese) c.price += 40;
+          return c;
+        }
+      }
+
+      /* ---------------------------
+   Singleton Pattern
+   - CartManager: single instance across app
+   --------------------------- */
+      class CartManager {
+        constructor() {
+          if (CartManager._instance) return CartManager._instance;
+          this.items = JSON.parse(localStorage.getItem("cart") || "[]");
+          CartManager._instance = this;
+        }
+        addItem(item) {
+          this.items.push(item);
+          this._save();
+        }
+        removeAt(i) {
+          this.items.splice(i, 1);
+          this._save();
+        }
+        clear() {
+          this.items = [];
+          this._save();
+        }
+        total() {
+          return this.items.reduce((s, i) => s + (i.price || 0), 0);
+        }
+        _save() {
+          localStorage.setItem("cart", JSON.stringify(this.items));
+        }
+        static getInstance() {
+          return new CartManager();
+        }
+      }
+
+      /* ---------------------------
+   Factory Pattern
+   - PaymentFactory returns specific payment strategy
+   Each strategy exposes pay(amount, order) -> Promise
+   --------------------------- */
+      class UpiPayment {
+        pay(amount, order) {
+          return fakeApiDelay(`UPI payment of ₹${amount} success`);
+        }
+      }
+      class WalletPayment {
+        pay(amount, order) {
+          return fakeApiDelay(`Wallet payment of ₹${amount} success`);
+        }
+      }
+      class CreditCardPayment {
+        pay(amount, order) {
+          return fakeApiDelay(`Credit card charged ₹${amount}`);
+        }
+      }
+      class CODPayment {
+        pay(amount, order) {
+          return fakeApiDelay(
+            `Cash on Delivery selected. Pay ₹${amount} at delivery`
+          );
+        }
+      }
+
+      class PaymentFactory {
+        static create(type) {
+          switch (type) {
+            case "upi":
+              return new UpiPayment();
+            case "wallet":
+              return new WalletPayment();
+            case "card":
+              return new CreditCardPayment();
+            case "cod":
+              return new CODPayment();
+            default:
+              throw new Error("Unknown payment type");
+          }
+        }
+      }
+
+      /* ---------------------------
+   Abstract Factory Pattern
+   - Families: OnlinePaymentsFactory and OfflinePaymentsFactory
+   - Each family can produce payment and a receipt policy
+   --------------------------- */
+      class OnlinePaymentsFactory {
+        createPayment(type) {
+          // online family allows upi/wallet/card (if cod requested fallback)
+          if (type === "cod") type = "upi";
+          return PaymentFactory.create(type);
+        }
+        createReceipt() {
+          return {
+            send: (order) =>
+              fakeApiDelay(`Email receipt sent for order ${order.id}`),
+          };
+        }
+      }
+      class OfflinePaymentsFactory {
+        createPayment(type) {
+          // offline family always gives COD
+          return PaymentFactory.create("cod");
+        }
+        createReceipt() {
+          return {
+            send: (order) =>
+              fakeApiDelay(`Paper receipt prepared for ${order.id}`),
+          };
+        }
+      }
+
+      /* ---------------------------
+   Builder Pattern
+   - OrderBuilder constructs final order step-by-step
+   --------------------------- */
+      class Order {
+        constructor() {
+          this.id = Date.now();
+          this.items = [];
+          this.address = null;
+          this.payment = null;
+          this.coupon = null;
+          this.total = 0;
+          this.createdAt = new Date().toISOString();
+        }
+      }
+      class OrderBuilder {
+        constructor() {
+          this.order = new Order();
+        }
+        addItems(items) {
+          this.order.items = items;
+          return this;
+        }
+        setAddress(addr) {
+          this.order.address = addr;
+          return this;
+        }
+        setPaymentInfo(info) {
+          this.order.payment = info;
+          return this;
+        }
+        applyCoupon(code) {
+          this.order.coupon = code || null;
+          if (code === "NEW50")
+            this.order.total = Math.max(0, (this.order.total || 0) - 50);
+          return this;
+        }
+        setTotal(total) {
+          this.order.total = total;
+          return this;
+        }
+        build() {
+          return this.order;
+        }
+      }
+
+      /* ---------------------------
+   Utilities: fake API delay
+   --------------------------- */
+      function fakeApiDelay(result, ms = 600) {
+        return new Promise((res) =>
+          setTimeout(() => res({ status: "ok", message: result }), ms)
+        );
+      }
+
+      /* ---------------------------
+   App: render + interactions
+   --------------------------- */
+      const cart = CartManager.getInstance();
+      const menuContainer = document.getElementById("menuList");
+      const cartList = document.getElementById("cartList");
+      const totalEl = document.getElementById("total");
+      const cartCount = document.getElementById("cartCount");
+      const restaurantName = document.getElementById("restaurantName");
+      const ordersList = document.getElementById("ordersList");
+      const checkoutBtn = document.getElementById("checkoutBtn");
+      const familySelect = document.getElementById("familySelect");
+      const paymentType = document.getElementById("paymentType");
+      const addressInput = document.getElementById("address");
+      const couponInput = document.getElementById("coupon");
+      const checkoutMsg = document.getElementById("checkoutMsg");
+
+      let PAST_ORDERS = JSON.parse(localStorage.getItem("orders") || "[]");
+
+      /* load menu (simulated fetch) */
+      function loadMenu() {
+        restaurantName.textContent = SIMULATED_MENU.restaurant;
+        // instantiate prototypes from data
+        const prototypes = SIMULATED_MENU.items.map(
+          (it) => new MenuItemProto(it)
+        );
+        // render
+        menuContainer.innerHTML = "";
+        prototypes.forEach((proto) => {
+          const row = document.createElement("div");
+          row.className = "menu-item";
+          row.innerHTML = `<div>
+                      <div><strong>${proto.name}</strong></div>
+                      <div class="small">${proto.desc}</div>
+                    </div>
+                    <div style="text-align:right">
+                      <div>₹${proto.price}</div>
+                      <div style="margin-top:6px">
+                        <button data-id="${proto.id}">Add</button>
+                      </div>
+                    </div>`;
+          menuContainer.appendChild(row);
+          row.querySelector("button").addEventListener("click", () => {
+            // demonstration of prototype clone + customization modal (simple)
+            const customized = proto.withCustomization({
+              size: "Large",
+              extraCheese: false,
+            });
+            cart.addItem({
+              id: customized.id,
+              name:
+                customized.name +
+                (customized.custom.size
+                  ? " (" + customized.custom.size + ")"
+                  : ""),
+              price: customized.price,
+              custom: customized.custom,
+            });
+            rerenderCart();
+          });
+        });
+      }
+
+      /* rerender cart */
+      function rerenderCart() {
+        cartList.innerHTML = "";
+        if (cart.items.length === 0)
+          cartList.innerHTML = '<div class="small muted">Cart is empty</div>';
+        cart.items.forEach((it, i) => {
+          const el = document.createElement("div");
+          el.className = "cart-item";
+          el.innerHTML = `<div>
+                      <div><strong>${it.name}</strong></div>
+                      <div class="small">₹${it.price} • ${
+            it.custom && Object.keys(it.custom).length
+              ? JSON.stringify(it.custom)
+              : "No custom"
+          }</div>
+                    </div>
+                    <div style="text-align:right">
+                      <div><button data-i="${i}">Remove</button></div>
+                    </div>`;
+          cartList.appendChild(el);
+          el.querySelector("button").addEventListener("click", () => {
+            cart.removeAt(i);
+            rerenderCart();
+          });
+        });
+        totalEl.textContent = cart.total();
+        cartCount.textContent = `(${cart.items.length})`;
+      }
+
+      /* rerender orders */
+      function rerenderOrders() {
+        if (PAST_ORDERS.length === 0) {
+          ordersList.innerHTML = "No orders yet";
+          return;
+        }
+        ordersList.innerHTML = PAST_ORDERS.slice()
+          .reverse()
+          .map(
+            (o) =>
+              `<div style="margin-bottom:8px"><strong>Order ${o.id}</strong><div class="small">${o.items.length} items • ₹${o.total} • ${o.createdAt}</div></div>`
+          )
+          .join("");
+      }
+
+      /* checkout logic demonstrating Factory + AbstractFactory + Builder */
+      checkoutBtn.addEventListener("click", async () => {
+        checkoutMsg.textContent = "Processing...";
+        const family = familySelect.value;
+        const pType = paymentType.value;
+        const address = addressInput.value.trim();
+        const coupon = couponInput.value.trim();
+
+        if (cart.items.length === 0) {
+          checkoutMsg.textContent = "Cart empty";
+          return;
+        }
+        if (!address) {
+          checkoutMsg.textContent = "Enter address";
+          return;
+        }
+
+        // choose abstract factory
+        const familyFactory =
+          family === "online"
+            ? new OnlinePaymentsFactory()
+            : new OfflinePaymentsFactory();
+        // familyFactory creates payment (abstract factory)
+        const paymentStrategy = familyFactory.createPayment(pType);
+        // build order with builder
+        const builder = new OrderBuilder();
+        builder
+          .addItems(cart.items)
+          .setAddress(address)
+          .setTotal(cart.total())
+          .setPaymentInfo({ type: pType });
+        builder.applyCoupon(coupon);
+        const order = builder.build();
+
+        // demonstrate: call payment strategy (factory product)
+        try {
+          const payResult = await paymentStrategy.pay(order.total, order);
+          await familyFactory.createReceipt().send(order); // receipt from family
+          // store order
+          PAST_ORDERS.push({ ...order, status: payResult.message });
+          localStorage.setItem("orders", JSON.stringify(PAST_ORDERS));
+          cart.clear();
+          rerenderCart();
+          rerenderOrders();
+          checkoutMsg.textContent = "Order placed ✓ — " + payResult.message;
+        } catch (err) {
+          checkoutMsg.textContent = "Payment failed: " + (err.message || err);
+        }
+      });
+
+      /* clear cart */
+      document.getElementById("clearCart").addEventListener("click", () => {
+        cart.clear();
+        rerenderCart();
+      });
+
+      /* initial render */
+      loadMenu();
+      rerenderCart();
+      rerenderOrders();
+    </script>
+  </body>
+</html>
